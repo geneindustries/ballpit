@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #f8f9fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+    
+    #canvas-container {
+      position: relative;
+    }
+    
+    #canvas {
+      background-color: white;
+      border: 1px solid #ddd;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      cursor: default;
+    }
+    
+    .grab-cursor {
+      cursor: grab;
+    }
+    
+    .grabbing-cursor {
+      cursor: grabbing;
+    }
+    
+    #customize-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 8px 12px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      z-index: 10;
+    }
+    
+    #customize-btn:hover {
+      background-color: #45a049;
+    }
+    
+    #customize-panel {
+      position: absolute;
+      top: 50px;
+      right: 10px;
+      width: 200px;
+      background-color: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      display: none;
+      z-index: 20;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    .control-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    .control-group input, .control-group select {
+      width: 100%;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+    
+    #apply-btn {
+      width: 100%;
+      padding: 8px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    #apply-btn:hover {
+      background-color: #45a049;
+    }
+    
+    #color-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    
+    .color-preset {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 1px solid #ccc;
+    }
+    
+    @keyframes bounce-flash {
+      0% { opacity: 0; transform: scale(0.5); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0; transform: scale(0.5); }
+    }
+    
+    #bounce-flash {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 80px;
+      font-weight: bold;
+      color: #ff0000;
+      text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 30;
+    }
+    
+    .flash-animation {
+      animation: bounce-flash 2s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <canvas id="canvas" width="600" height="400"></canvas>
+    <button id="customize-btn">Customize</button>
+    <div id="customize-panel">
+      <div class="control-group">
+        <label for="ball-count">Number of Balls:</label>
+        <input type="range" id="ball-count" min="1" max="50" value="23">
+        <span id="ball-count-value">23</span>
+      </div>
+      
+      <div class="control-group">
+        <label for="min-size">Minimum Size:</label>
+        <input type="range" id="min-size" min="5" max="25" value="10">
+        <span id="min-size-value">10</span>
+      </div>
+      
+      <div class="control-group">
+        <label for="max-size">Maximum Size:</label>
+        <input type="range" id="max-size" min="15" max="50" value="23">
+        <span id="max-size-value">23</span>
+      </div>
+      
+      <div class="control-group">
+        <label for="gravity">Gravity:</label>
+        <input type="range" id="gravity" min="0.05" max="1.0" step="0.01" value="0.5">
+        <span id="gravity-value">0.50</span>
+      </div>
+      
+      <div class="control-group">
+        <label for="bounciness">Bounciness:</label>
+        <input type="range" id="bounciness" min="0.5" max="0.99" step="0.01" value="0.85">
+        <span id="bounciness-value">0.85</span>
+      </div>
+      
+      <div class="control-group">
+        <label for="color-scheme">Color Scheme:</label>
+        <select id="color-scheme">
+          <option value="rainbow">Rainbow</option>
+          <option value="pastel" selected>Pastel</option>
+          <option value="neon">Neon</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      
+      <div class="control-group" id="custom-color-group" style="display: none;">
+        <label>Custom Color:</label>
+        <input type="color" id="custom-color" value="#ff0000">
+        <div id="color-presets">
+          <div class="color-preset" style="background-color: #ff0000;" data-color="#ff0000"></div>
+          <div class="color-preset" style="background-color: #00ff00;" data-color="#00ff00"></div>
+          <div class="color-preset" style="background-color: #0000ff;" data-color="#0000ff"></div>
+          <div class="color-preset" style="background-color: #ffff00;" data-color="#ffff00"></div>
+          <div class="color-preset" style="background-color: #ff00ff;" data-color="#ff00ff"></div>
+          <div class="color-preset" style="background-color: #00ffff;" data-color="#00ffff"></div>
+        </div>
+      </div>
+      
+      <button id="apply-btn">Apply Changes</button>
+    </div>
+    <div id="bounce-flash">BoUNCE</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const bounceFlash = document.getElementById('bounce-flash');
+    
+    const customizeBtn = document.getElementById('customize-btn');
+    const customizePanel = document.getElementById('customize-panel');
+    const ballCountSlider = document.getElementById('ball-count');
+    const ballCountValue = document.getElementById('ball-count-value');
+    const minSizeSlider = document.getElementById('min-size');
+    const minSizeValue = document.getElementById('min-size-value');
+    const maxSizeSlider = document.getElementById('max-size');
+    const maxSizeValue = document.getElementById('max-size-value');
+    const gravitySlider = document.getElementById('gravity');
+    const gravityValue = document.getElementById('gravity-value');
+    const bouncinessSlider = document.getElementById('bounciness');
+    const bouncinessValue = document.getElementById('bounciness-value');
+    const colorSchemeSelect = document.getElementById('color-scheme');
+    const customColorGroup = document.getElementById('custom-color-group');
+    const customColorInput = document.getElementById('custom-color');
+    const colorPresets = document.querySelectorAll('.color-preset');
+    const applyBtn = document.getElementById('apply-btn');
+    
+    let settings = {
+      ballCount: 23,
+      minSize: 10,
+      maxSize: 23,
+      gravity: 0.5,
+      bounciness: 0.85,
+      colorScheme: 'pastel',
+      customColor: '#ff0000'
+    };
+    
+    const colorSchemes = {
+      rainbow: ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'],
+      pastel: ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D0BAFF', '#F9BAFF'],
+      neon: ['#FF00FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF0000', '#7F00FF', '#0000FF']
+    };
+    
+    let bounceCount = 0;
+    let lastMilestone = 0;
+    
+    function createBall(x, y, radius, color) {
+      return {
+        x,
+        y,
+        radius,
+        dx: Math.random() * 4 - 2,
+        dy: Math.random() * 4 - 2,
+        gravity: 0.216,
+        damping: settings.bounciness,
+        color,
+        isMovingDown: true
+      };
+    }
+    
+    let balls = [];
+    
+    function createBalls() {
+      balls = [];
+      
+      let colors;
+      if (settings.colorScheme === 'custom') {
+        colors = Array(settings.ballCount).fill(settings.customColor);
+      } else {
+        colors = colorSchemes[settings.colorScheme];
+      }
+      
+      for (let i = 0; i < settings.ballCount; i++) {
+        const radius = settings.minSize + Math.random() * (settings.maxSize - settings.minSize);
+        const x = radius + Math.random() * (canvas.width - 2 * radius);
+        const y = radius + Math.random() * (canvas.height - 2 * radius);
+        balls.push(createBall(x, y, radius, colors[i % colors.length]));
+      }
+    }
+    
+    createBalls();
+    
+    let draggedBall = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let velocityX = 0;
+    let velocityY = 0;
+    let lastTime = 0;
+    
+    function getMouseOverBall(mouseX, mouseY) {
+      for (let i = balls.length - 1; i >= 0; i--) {
+        const ball = balls[i];
+        const distance = Math.sqrt(
+          Math.pow(mouseX - ball.x, 2) + 
+          Math.pow(mouseY - ball.y, 2)
+        );
+        if (distance <= ball.radius) {
+          return ball;
+        }
+      }
+      return null;
+    }
+    
+    function getMousePos(canvas, evt) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+      };
+    }
+    
+    canvas.addEventListener('mousedown', (e) => {
+      const mousePos = getMousePos(canvas, e);
+      const ball = getMouseOverBall(mousePos.x, mousePos.y);
+      
+      if (ball) {
+        const index = balls.indexOf(ball);
+        balls.splice(index, 1);
+        balls.push(ball);
+        
+        draggedBall = ball;
+        dragStartX = mousePos.x;
+        dragStartY = mousePos.y;
+        lastMouseX = mousePos.x;
+        lastMouseY = mousePos.y;
+        lastTime = Date.now();
+        ball.dx = 0;
+        ball.dy = 0;
+        canvas.classList.add('grabbing-cursor');
+      }
+    });
+    
+    canvas.addEventListener('mousemove', (e) => {
+      const mousePos = getMousePos(canvas, e);
+      
+      if (getMouseOverBall(mousePos.x, mousePos.y) && !draggedBall) {
+        canvas.classList.add('grab-cursor');
+      } else if (!draggedBall) {
+        canvas.classList.remove('grab-cursor');
+      }
+      
+      if (draggedBall) {
+        const currentTime = Date.now();
+        const dt = (currentTime - lastTime) / 1000;
+        
+        if (dt > 0) {
+          velocityX = (mousePos.x - lastMouseX) / dt;
+          velocityY = (mousePos.y - lastMouseY) / dt;
+        }
+        
+        draggedBall.x = mousePos.x;
+        draggedBall.y = mousePos.y;
+        
+        lastMouseX = mousePos.x;
+        lastMouseY = mousePos.y;
+        lastTime = currentTime;
+      }
+    });
+    
+    canvas.addEventListener('mouseup', () => {
+      if (draggedBall) {
+        draggedBall.dx = velocityX * 0.1;
+        draggedBall.dy = velocityY * 0.1;
+        draggedBall = null;
+        canvas.classList.remove('grabbing-cursor');
+        canvas.classList.remove('grab-cursor');
+      }
+    });
+    
+    canvas.addEventListener('mouseout', () => {
+      if (draggedBall) {
+        draggedBall.dx = velocityX * 0.1;
+        draggedBall.dy = velocityY * 0.1;
+        draggedBall = null;
+        canvas.classList.remove('grabbing-cursor');
+        canvas.classList.remove('grab-cursor');
+      }
+    });
+    
+    function showBounceFlash() {
+      bounceFlash.classList.remove('flash-animation');
+      
+      void bounceFlash.offsetWidth;
+      
+      bounceFlash.classList.add('flash-animation');
+    }
+    
+    function checkCollision(ballA, ballB) {
+      const dx = ballB.x - ballA.x;
+      const dy = ballB.y - ballA.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < ballA.radius + ballB.radius) {
+        const angle = Math.atan2(dy, dx);
+        
+        const velocityAngle1 = Math.atan2(ballA.dy, ballA.dx);
+        const velocityAngle2 = Math.atan2(ballB.dy, ballB.dx);
+        
+        const speed1 = Math.sqrt(ballA.dx * ballA.dx + ballA.dy * ballA.dy);
+        const speed2 = Math.sqrt(ballB.dx * ballB.dx + ballB.dy * ballB.dy);
+        
+        const vel1 = {
+          x: speed1 * Math.cos(velocityAngle1 - angle),
+          y: speed1 * Math.sin(velocityAngle1 - angle)
+        };
+        const vel2 = {
+          x: speed2 * Math.cos(velocityAngle2 - angle),
+          y: speed2 * Math.sin(velocityAngle2 - angle)
+        };
+        
+        const massA = ballA.radius * ballA.radius * Math.PI;
+        const massB = ballB.radius * ballB.radius * Math.PI;
+        
+        const newVel1x = (vel1.x * (massA - massB) + 2 * massB * vel2.x) / (massA + massB);
+        const newVel2x = (vel2.x * (massB - massA) + 2 * massA * vel1.x) / (massA + massB);
+        
+        ballA.dx = Math.cos(angle) * newVel1x + Math.cos(angle + Math.PI/2) * vel1.y;
+        ballA.dy = Math.sin(angle) * newVel1x + Math.sin(angle + Math.PI/2) * vel1.y;
+        
+        ballB.dx = Math.cos(angle) * newVel2x + Math.cos(angle + Math.PI/2) * vel2.y;
+        ballB.dy = Math.sin(angle) * newVel2x + Math.sin(angle + Math.PI/2) * vel2.y;
+        
+        const overlap = (ballA.radius + ballB.radius) - distance;
+        const separationX = overlap * Math.cos(angle);
+        const separationY = overlap * Math.sin(angle);
+        
+        const totalRadius = ballA.radius + ballB.radius;
+        const ratioA = ballB.radius / totalRadius;
+        const ratioB = ballA.radius / totalRadius;
+        
+        if (ballA !== draggedBall) {
+          ballA.x -= separationX * ratioA;
+          ballA.y -= separationY * ratioA;
+        }
+        
+        if (ballB !== draggedBall) {
+          ballB.x += separationX * ratioB;
+          ballB.y += separationY * ratioB;
+        }
+      }
+    }
+    
+    function drawBackgroundText() {
+      ctx.save();
+      
+      ctx.font = "bold 48px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      ctx.lineWidth = 4.2;
+      ctx.strokeStyle = "black";
+      ctx.strokeText("GENE's BALL PIT", canvas.width / 2, canvas.height / 2 - 15);
+      
+      ctx.fillStyle = "white";
+      ctx.fillText("GENE's BALL PIT", canvas.width / 2, canvas.height / 2 - 15);
+      
+      ctx.font = "bold 24px Arial";
+      ctx.lineWidth = 2.1;
+      ctx.strokeStyle = "black";
+      ctx.strokeText("GRAB A BALL AND THROW THAT BITCH", canvas.width / 2, canvas.height / 2 + 25);
+      ctx.fillStyle = "white";
+      ctx.fillText("GRAB A BALL AND THROW THAT BITCH", canvas.width / 2, canvas.height / 2 + 25);
+      
+      ctx.restore();
+    }
+    
+    function drawBounceCounter() {
+      ctx.save();
+      
+      ctx.font = "bold 24px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      
+      ctx.lineWidth = 3.15;
+      ctx.strokeStyle = "black";
+      ctx.strokeText(`Bounces: ${bounceCount}`, canvas.width / 2, 10);
+      
+      ctx.fillStyle = "white";
+      ctx.fillText(`Bounces: ${bounceCount}`, canvas.width / 2, 10);
+      
+      ctx.restore();
+    }
+    
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      drawBackgroundText();
+      
+      for (let i = 0; i < balls.length; i++) {
+        const ball = balls[i];
+        
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = ball.color;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "black";
+        ctx.stroke();
+        ctx.closePath();
+        
+        if (ball !== draggedBall) {
+          const wasMovingDown = ball.dy > 0;
+          
+          ball.x += ball.dx;
+          ball.y += ball.dy;
+          ball.dy += ball.gravity;
+          
+          if (Math.abs(ball.dx) < 0.05) ball.dx = 0;
+          if (Math.abs(ball.dy) < 0.05) ball.dy = 0;
+          
+          if (ball.x + ball.radius > canvas.width) {
+            ball.x = canvas.width - ball.radius;
+            ball.dx = -ball.dx * ball.damping;
+          } else if (ball.x - ball.radius < 0) {
+            ball.x = ball.radius;
+            ball.dx = -ball.dx * ball.damping;
+          }
+          
+          if (ball.y + ball.radius > canvas.height) {
+            if (wasMovingDown && ball.dy > 1) {
+              bounceCount++;
+              
+              const currentMilestone = Math.floor(bounceCount / 1000);
+              if (currentMilestone > lastMilestone) {
+                lastMilestone = currentMilestone;
+                showBounceFlash();
+              }
+            }
+            
+            ball.y = canvas.height - ball.radius;
+            ball.dy = -ball.dy * ball.damping;
+            
+            ball.dx *= 0.95;
+          }
+          
+          if (ball.y - ball.radius < 0) {
+            ball.y = ball.radius;
+            ball.dy = -ball.dy * ball.damping;
+          }
+        }
+      }
+      
+      for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+          checkCollision(balls[i], balls[j]);
+        }
+      }
+      
+      drawBounceCounter();
+      
+      requestAnimationFrame(animate);
+    }
+    
+    customizeBtn.addEventListener('click', () => {
+      if (customizePanel.style.display === 'none' || customizePanel.style.display === '') {
+        customizePanel.style.display = 'block';
+      } else {
+        customizePanel.style.display = 'none';
+      }
+    });
+    
+    ballCountSlider.addEventListener('input', () => {
+      ballCountValue.textContent = ballCountSlider.value;
+    });
+    
+    minSizeSlider.addEventListener('input', () => {
+      minSizeValue.textContent = minSizeSlider.value;
+      if (parseInt(minSizeSlider.value) > parseInt(maxSizeSlider.value)) {
+        maxSizeSlider.value = minSizeSlider.value;
+        maxSizeValue.textContent = maxSizeSlider.value;
+      }
+    });
+    
+    maxSizeSlider.addEventListener('input', () => {
+      maxSizeValue.textContent = maxSizeSlider.value;
+      if (parseInt(maxSizeSlider.value) < parseInt(minSizeSlider.value)) {
+        minSizeSlider.value = maxSizeSlider.value;
+        minSizeValue.textContent = minSizeSlider.value;
+      }
+    });
+    
+    gravitySlider.addEventListener('input', () => {
+      gravityValue.textContent = parseFloat(gravitySlider.value).toFixed(2);
+    });
+    
+    bouncinessSlider.addEventListener('input', () => {
+      bouncinessValue.textContent = parseFloat(bouncinessSlider.value).toFixed(2);
+    });
+    
+    colorSchemeSelect.addEventListener('change', () => {
+      if (colorSchemeSelect.value === 'custom') {
+        customColorGroup.style.display = 'block';
+      } else {
+        customColorGroup.style.display = 'none';
+      }
+    });
+    
+    colorPresets.forEach(preset => {
+      preset.addEventListener('click', () => {
+        const color = preset.getAttribute('data-color');
+        customColorInput.value = color;
+      });
+    });
+    
+    applyBtn.addEventListener('click', () => {
+      settings.ballCount = parseInt(ballCountSlider.value);
+      settings.minSize = parseInt(minSizeSlider.value);
+      settings.maxSize = parseInt(maxSizeSlider.value);
+      settings.gravity = parseFloat(gravitySlider.value);
+      settings.bounciness = parseFloat(bouncinessSlider.value);
+      settings.colorScheme = colorSchemeSelect.value;
+      settings.customColor = customColorInput.value;
+      
+      bounceCount = 0;
+      lastMilestone = 0;
+      
+      createBalls();
+      
+      customizePanel.style.display = 'none';
+    });
+    
+    animate();
+    
+    ballCountSlider.value = 23;
+    ballCountValue.textContent = "23";
+    
+    minSizeSlider.value = 10;
+    minSizeValue.textContent = "10";
+    
+    maxSizeSlider.value = 23;
+    maxSizeValue.textContent = "23";
+    
+    gravitySlider.max = 1.0;
+    gravitySlider.value = 0.5;
+    gravityValue.textContent = "21.60";
+  </script>
+</body>
+</html>
