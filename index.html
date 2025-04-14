@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gene's Ball Pit</title>
   <style>
     body {
@@ -14,20 +14,24 @@
       align-items: center;
       height: 100vh;
       font-family: Arial, sans-serif;
-      touch-action: none;
     }
     
     #canvas-container {
       width: 100vw;
       height: 100vh;
       position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     
     #canvas {
       width: 100%;
       height: 100%;
+      max-width: 600px; /* Maximum width for PC */
+      max-height: 400px; /* Maximum height for PC, maintaining 3:2 aspect ratio */
       background-color: white;
-      border: 6px solid black;
+      border: 2px solid black; /* Thin black border */
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       cursor: default;
     }
@@ -128,7 +132,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 60px;
+      font-size: 80px;
       font-weight: bold;
       color: #ff0000;
       text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
@@ -143,78 +147,53 @@
     
     @media (max-width: 600px) {
       #customize-btn {
-        padding: 14px 20px;
-        font-size: 18px;
-        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 16px;
       }
       #customize-panel {
-        width: 80%;
-        max-width: 300px;
+        width: 250px;
         padding: 20px;
-        top: 70px;
-        right: 50%;
-        transform: translateX(50%);
-        box-sizing: border-box;
-      }
-      .control-group label {
-        font-size: 16px;
       }
       .control-group input,
       .control-group select {
-        padding: 10px;
-        font-size: 16px;
-        height: 40px;
+        padding: 8px;
       }
       #apply-btn {
-        padding: 12px;
-        font-size: 16px;
-        height: 45px;
+        padding: 10px;
       }
       .color-preset {
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        border: 2px solid #ccc;
-      }
-      #canvas-container {
-        width: 100vw;
-        height: 100vh;
-      }
-      #canvas {
-        border: 6px solid black;
-      }
-      #bounce-flash {
-        font-size: 40px;
+        width: 30px;
+        height: 30px;
       }
     }
   </style>
 </head>
 <body>
   <div id="canvas-container">
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas"></canvas> <!-- Removed fixed width and height attributes -->
     <button id="customize-btn">Customize</button>
     <div id="customize-panel">
       <div class="control-group">
         <label for="ball-count">Number of Balls:</label>
-        <input type="range" id="ball-count" min="1" max="30" value="15">
-        <span id="ball-count-value">15</span>
+        <input type="range" id="ball-count" min="1" max="50" value="23">
+        <span id="ball-count-value">23</span>
       </div>
       
       <div class="control-group">
         <label for="min-size">Minimum Size:</label>
-        <input type="range" id="min-size" min="5" max="20" value="8">
-        <span id="min-size-value">8</span>
+        <input type="range" id="min-size" min="5" max="25" value="10">
+        <span id="min-size-value">10</span>
       </div>
       
       <div class="control-group">
         <label for="max-size">Maximum Size:</label>
-        <input type="range" id="max-size" min="10" max="40" value="18">
-        <span id="max-size-value">18</span>
+        <input type="range" id="max-size" min="15" max="50" value="23">
+        <span id="max-size-value">23</span>
       </div>
       
       <div class="control-group">
         <label for="gravity">Gravity:</label>
-        <input type="range" id="gravity" min="0.05" max="1.0" step="0.01" value="0.23">
+        <input type="range" id="gravity" min="0.05" max="1.0" step="0.01" value="0.23"> <!-- Changed initial value to 0.23 -->
         <span id="gravity-value">0.23</span>
       </div>
       
@@ -253,31 +232,9 @@
   </div>
 
   <script>
-    var gk_fileData = {};
-    function loadFileData(filename) {
-      return gk_fileData[filename] || "";
-    }
-
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const bounceFlash = document.getElementById('bounce-flash');
-    
-    // Set canvas resolution based on device type
-    function resizeCanvas() {
-      const isMobile = window.innerWidth < 600;
-      const dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
-      canvas.width = Math.round(window.innerWidth * dpr);
-      canvas.height = Math.round(window.innerHeight * dpr);
-      canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
-      if (isMobile) {
-        ctx.scale(dpr, dpr);
-      }
-      createBalls();
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('orientationchange', resizeCanvas);
     
     const customizeBtn = document.getElementById('customize-btn');
     const customizePanel = document.getElementById('customize-panel');
@@ -296,12 +253,34 @@
     const customColorInput = document.getElementById('custom-color');
     const colorPresets = document.querySelectorAll('.color-preset');
     const applyBtn = document.getElementById('apply-btn');
-    
+
+    // Dynamically set canvas size based on viewport
+    function resizeCanvas() {
+      const container = document.getElementById('canvas-container');
+      const aspectRatio = 600 / 400; // 3:2 aspect ratio
+      let width = container.clientWidth;
+      let height = container.clientHeight;
+
+      if (width / height > aspectRatio) {
+        width = height * aspectRatio;
+      } else {
+        height = width / aspectRatio;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial call
+
     let settings = {
-      ballCount: 15,
-      minSize: 8,
-      maxSize: 18,
-      gravity: 0.23,
+      ballCount: 23,
+      minSize: 10,
+      maxSize: 23,
+      gravity: 0.23, // Initial gravity set to 0.23
       bounciness: 0.85,
       colorScheme: 'pastel',
       customColor: '#ff0000'
@@ -342,8 +321,8 @@
       }
       for (let i = 0; i < settings.ballCount; i++) {
         const radius = settings.minSize + Math.random() * (settings.maxSize - settings.minSize);
-        const x = radius + Math.random() * (window.innerWidth - 2 * radius);
-        const y = radius + Math.random() * (window.innerHeight - 2 * radius);
+        const x = radius + Math.random() * (canvas.width - 2 * radius);
+        const y = radius + Math.random() * (canvas.height - 2 * radius);
         balls.push(createBall(x, y, radius, colors[i % colors.length]));
       }
     }
@@ -375,6 +354,8 @@
     
     function getEventPos(canvas, evt) {
       const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
       let clientX, clientY;
       if (evt.type.startsWith('touch')) {
         const touch = evt.touches[0] || evt.changedTouches[0];
@@ -385,8 +366,8 @@
         clientY = evt.clientY;
       }
       return {
-        x: (clientX - rect.left) * window.innerWidth / rect.width,
-        y: (clientY - rect.top) * window.innerHeight / rect.height
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
       };
     }
     
@@ -514,40 +495,38 @@
     
     function drawBackgroundText() {
       ctx.save();
-      const isMobile = window.innerWidth < 600;
-      ctx.font = isMobile ? "bold 32px Arial" : `bold ${Math.min(window.innerWidth / 20, 48)}px Arial`;
+      ctx.font = "bold 48px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.lineWidth = isMobile ? 3 : Math.min(window.innerWidth / 400, 4.2);
+      ctx.lineWidth = 4.2;
       ctx.strokeStyle = "black";
-      ctx.strokeText("GENE's BALL PIT", window.innerWidth / 2, window.innerHeight / 2 - 15);
+      ctx.strokeText("GENE's BALL PIT", canvas.width / 2, canvas.height / 2 - 15);
       ctx.fillStyle = "white";
-      ctx.fillText("GENE's BALL PIT", window.innerWidth / 2, window.innerHeight / 2 - 15);
-      ctx.font = isMobile ? "bold 16px Arial" : `bold ${Math.min(window.innerWidth / 40, 24)}px Arial`;
-      ctx.lineWidth = isMobile ? 1.5 : Math.min(window.innerWidth / 600, 2.1);
+      ctx.fillText("GENE's BALL PIT", canvas.width / 2, canvas.height / 2 - 15);
+      ctx.font = "bold 24px Arial";
+      ctx.lineWidth = 2.1;
       ctx.strokeStyle = "black";
-      ctx.strokeText("GRAB A BALL AND THROW THAT BITCH", window.innerWidth / 2, window.innerHeight / 2 + 25);
+      ctx.strokeText("GRAB A BALL AND THROW THAT BITCH", canvas.width / 2, canvas.height / 2 + 25);
       ctx.fillStyle = "white";
-      ctx.fillText("GRAB A BALL AND THROW THAT BITCH", window.innerWidth / 2, window.innerHeight / 2 + 25);
+      ctx.fillText("GRAB A BALL AND THROW THAT BITCH", canvas.width / 2, canvas.height / 2 + 25);
       ctx.restore();
     }
     
     function drawBounceCounter() {
       ctx.save();
-      const isMobile = window.innerWidth < 600;
-      ctx.font = isMobile ? "bold 18px Arial" : `bold ${Math.min(window.innerWidth / 50, 24)}px Arial`;
+      ctx.font = "bold 24px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.lineWidth = isMobile ? 2 : Math.min(window.innerWidth / 500, 3.15);
+      ctx.lineWidth = 3.15;
       ctx.strokeStyle = "black";
-      ctx.strokeText(`Bounces: ${bounceCount}`, window.innerWidth / 2, 10);
+      ctx.strokeText(`Bounces: ${bounceCount}`, canvas.width / 2, 10);
       ctx.fillStyle = "white";
-      ctx.fillText(`Bounces: ${bounceCount}`, window.innerWidth / 2, 10);
+      ctx.fillText(`Bounces: ${bounceCount}`, canvas.width / 2, 10);
       ctx.restore();
     }
     
     function animate() {
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBackgroundText();
       for (let i = 0; i < balls.length; i++) {
         const ball = balls[i];
@@ -555,7 +534,7 @@
         ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
         ctx.fillStyle = ball.color;
         ctx.fill();
-        ctx.lineWidth = window.innerWidth < 600 ? 1.5 : 2;
+        ctx.lineWidth = 2;
         ctx.strokeStyle = "black";
         ctx.stroke();
         ctx.closePath();
@@ -566,14 +545,14 @@
           ball.dy += ball.gravity;
           if (Math.abs(ball.dx) < 0.05) ball.dx = 0;
           if (Math.abs(ball.dy) < 0.05) ball.dy = 0;
-          if (ball.x + ball.radius > window.innerWidth) {
-            ball.x = window.innerWidth - ball.radius;
+          if (ball.x + ball.radius > canvas.width) {
+            ball.x = canvas.width - ball.radius;
             ball.dx = -ball.dx * ball.damping;
           } else if (ball.x - ball.radius < 0) {
             ball.x = ball.radius;
             ball.dx = -ball.dx * ball.damping;
           }
-          if (ball.y + ball.radius > window.innerHeight) {
+          if (ball.y + ball.radius > canvas.height) {
             if (wasMovingDown && ball.dy > 1) {
               bounceCount++;
               const currentMilestone = Math.floor(bounceCount / 1000);
@@ -582,9 +561,9 @@
                 showBounceFlash();
               }
             }
-            ball.y = window.innerHeight - ball.radius;
-            ball.dx *= 0.95;
+            ball.y = canvas.height - ball.radius;
             ball.dy = -ball.dy * ball.damping;
+            ball.dx *= 0.95;
           }
           if (ball.y - ball.radius < 0) {
             ball.y = ball.radius;
@@ -593,7 +572,7 @@
         }
       }
       for (let i = 0; i < balls.length; i++) {
-        for (j = i + 1; j < balls.length; j++) {
+        for (let j = i + 1; j < balls.length; j++) {
           checkCollision(balls[i], balls[j]);
         }
       }
@@ -668,13 +647,13 @@
     
     animate();
     
-    ballCountSlider.value = 15;
-    ballCountValue.textContent = "15";
-    minSizeSlider.value = 8;
-    minSizeValue.textContent = "8";
-    maxSizeSlider.value = 18;
-    maxSizeValue.textContent = "18";
-    gravitySlider.value = 0.23;
+    ballCountSlider.value = 23;
+    ballCountValue.textContent = "23";
+    minSizeSlider.value = 10;
+    minSizeValue.textContent = "10";
+    maxSizeSlider.value = 23;
+    maxSizeValue.textContent = "23";
+    gravitySlider.value = 0.23; // Initial gravity set to 0.23
     gravityValue.textContent = "0.23";
     bouncinessSlider.value = 0.85;
     bouncinessValue.textContent = "0.85";
