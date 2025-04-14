@@ -26,12 +26,10 @@
     }
     
     #canvas {
-      width: 100%;
-      height: 100%;
-      max-width: 600px; /* Maximum width for PC */
-      max-height: 400px; /* Maximum height for PC, maintaining 3:2 aspect ratio */
+      max-width: 100%;
+      max-height: 100%;
       background-color: white;
-      border: 2px solid black; /* Thin black border */
+      border: 2px solid black;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       cursor: default;
     }
@@ -145,32 +143,47 @@
       animation: bounce-flash 2s ease-out forwards;
     }
     
-    @media (max-width: 600px) {
+    @media (orientation: landscape) {
+      #canvas {
+        width: 80vw;
+        height: calc(80vw * 9 / 16);
+      }
       #customize-btn {
-        padding: 12px 16px;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      #customize-panel {
+        width: 200px;
+        padding: 15px;
+      }
+    }
+    
+    @media (orientation: portrait) {
+      #canvas {
+        width: 90vw;
+        height: calc(90vw * 16 / 9);
+      }
+      #customize-btn {
+        padding: 10px 14px;
         font-size: 16px;
       }
       #customize-panel {
-        width: 250px;
-        padding: 20px;
-      }
-      .control-group input,
-      .control-group select {
-        padding: 8px;
-      }
-      #apply-btn {
-        padding: 10px;
+        width: 80vw;
+        max-width: 250px;
+        padding: 15px;
+        top: 60px;
+        right: 10px;
       }
       .color-preset {
-        width: 30px;
-        height: 30px;
+        width: 25px;
+        height: 25px;
       }
     }
   </style>
 </head>
 <body>
   <div id="canvas-container">
-    <canvas id="canvas"></canvas> <!-- Removed fixed width and height attributes -->
+    <canvas id="canvas"></canvas>
     <button id="customize-btn">Customize</button>
     <div id="customize-panel">
       <div class="control-group">
@@ -193,7 +206,7 @@
       
       <div class="control-group">
         <label for="gravity">Gravity:</label>
-        <input type="range" id="gravity" min="0.05" max="1.0" step="0.01" value="0.23"> <!-- Changed initial value to 0.23 -->
+        <input type="range" id="gravity" min="0.05" max="1.0" step="0.01" value="0.23">
         <span id="gravity-value">0.23</span>
       </div>
       
@@ -253,34 +266,12 @@
     const customColorInput = document.getElementById('custom-color');
     const colorPresets = document.querySelectorAll('.color-preset');
     const applyBtn = document.getElementById('apply-btn');
-
-    // Dynamically set canvas size based on viewport
-    function resizeCanvas() {
-      const container = document.getElementById('canvas-container');
-      const aspectRatio = 600 / 400; // 3:2 aspect ratio
-      let width = container.clientWidth;
-      let height = container.clientHeight;
-
-      if (width / height > aspectRatio) {
-        width = height * aspectRatio;
-      } else {
-        height = width / aspectRatio;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-    }
-
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas(); // Initial call
-
+    
     let settings = {
       ballCount: 23,
       minSize: 10,
       maxSize: 23,
-      gravity: 0.23, // Initial gravity set to 0.23
+      gravity: 0.23,
       bounciness: 0.85,
       colorScheme: 'pastel',
       customColor: '#ff0000'
@@ -294,6 +285,17 @@
     
     let bounceCount = 0;
     let lastMilestone = 0;
+    
+    function setCanvasSize() {
+      const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+      if (isLandscape) {
+        canvas.width = 960;
+        canvas.height = 540; // 16:9
+      } else {
+        canvas.width = 540;
+        canvas.height = 960; // 9:16
+      }
+    }
     
     function createBall(x, y, radius, color) {
       return {
@@ -327,6 +329,15 @@
       }
     }
     
+    function resizeCanvas() {
+      setCanvasSize();
+      createBalls();
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', resizeCanvas);
+    
+    setCanvasSize();
     createBalls();
     
     let draggedBall = null;
@@ -596,7 +607,7 @@
       minSizeValue.textContent = minSizeSlider.value;
       if (parseInt(minSizeSlider.value) > parseInt(maxSizeSlider.value)) {
         maxSizeSlider.value = minSizeSlider.value;
-        maxSizeValue.textContent = maxSizeSlider.value;
+        maxSizeValue.textContent = minSizeSlider.value;
       }
     });
     
@@ -604,7 +615,7 @@
       maxSizeValue.textContent = maxSizeSlider.value;
       if (parseInt(maxSizeSlider.value) < parseInt(minSizeSlider.value)) {
         minSizeSlider.value = maxSizeSlider.value;
-        minSizeValue.textContent = minSizeSlider.value;
+        minSizeValue.textContent = maxSizeSlider.value;
       }
     });
     
@@ -653,7 +664,7 @@
     minSizeValue.textContent = "10";
     maxSizeSlider.value = 23;
     maxSizeValue.textContent = "23";
-    gravitySlider.value = 0.23; // Initial gravity set to 0.23
+    gravitySlider.value = 0.23;
     gravityValue.textContent = "0.23";
     bouncinessSlider.value = 0.85;
     bouncinessValue.textContent = "0.85";
