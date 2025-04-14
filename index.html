@@ -262,14 +262,17 @@
     const ctx = canvas.getContext('2d');
     const bounceFlash = document.getElementById('bounce-flash');
     
-    // Set canvas size to match screen, accounting for DPR
+    // Set canvas resolution based on device type
     function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
+      const isMobile = window.innerWidth < 600;
+      const dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
+      canvas.width = Math.round(window.innerWidth * dpr);
+      canvas.height = Math.round(window.innerHeight * dpr);
       canvas.style.width = window.innerWidth + 'px';
       canvas.style.height = window.innerHeight + 'px';
-      ctx.scale(dpr, dpr);
+      if (isMobile) {
+        ctx.scale(dpr, dpr);
+      }
       createBalls();
     }
     resizeCanvas();
@@ -337,13 +340,10 @@
       } else {
         colors = colorSchemes[settings.colorScheme];
       }
-      const dpr = window.devicePixelRatio || 1;
-      const canvasWidth = canvas.width / dpr;
-      const canvasHeight = canvas.height / dpr;
       for (let i = 0; i < settings.ballCount; i++) {
         const radius = settings.minSize + Math.random() * (settings.maxSize - settings.minSize);
-        const x = radius + Math.random() * (canvasWidth - 2 * radius);
-        const y = radius + Math.random() * (canvasHeight - 2 * radius);
+        const x = radius + Math.random() * (window.innerWidth - 2 * radius);
+        const y = radius + Math.random() * (window.innerHeight - 2 * radius);
         balls.push(createBall(x, y, radius, colors[i % colors.length]));
       }
     }
@@ -375,7 +375,6 @@
     
     function getEventPos(canvas, evt) {
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
       let clientX, clientY;
       if (evt.type.startsWith('touch')) {
         const touch = evt.touches[0] || evt.changedTouches[0];
@@ -386,8 +385,8 @@
         clientY = evt.clientY;
       }
       return {
-        x: (clientX - rect.left) * (canvas.width / dpr) / rect.width,
-        y: (clientY - rect.top) * (canvas.height / dpr) / rect.height
+        x: (clientX - rect.left) * window.innerWidth / rect.width,
+        y: (clientY - rect.top) * window.innerHeight / rect.height
       };
     }
     
@@ -516,16 +515,16 @@
     function drawBackgroundText() {
       ctx.save();
       const isMobile = window.innerWidth < 600;
-      ctx.font = isMobile ? "bold 32px Arial" : "bold 48px Arial";
+      ctx.font = isMobile ? "bold 32px Arial" : `bold ${Math.min(window.innerWidth / 20, 48)}px Arial`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.lineWidth = isMobile ? 3 : 4.2;
+      ctx.lineWidth = isMobile ? 3 : Math.min(window.innerWidth / 400, 4.2);
       ctx.strokeStyle = "black";
       ctx.strokeText("GENE's BALL PIT", window.innerWidth / 2, window.innerHeight / 2 - 15);
       ctx.fillStyle = "white";
       ctx.fillText("GENE's BALL PIT", window.innerWidth / 2, window.innerHeight / 2 - 15);
-      ctx.font = isMobile ? "bold 16px Arial" : "bold 24px Arial";
-      ctx.lineWidth = isMobile ? 1.5 : 2.1;
+      ctx.font = isMobile ? "bold 16px Arial" : `bold ${Math.min(window.innerWidth / 40, 24)}px Arial`;
+      ctx.lineWidth = isMobile ? 1.5 : Math.min(window.innerWidth / 600, 2.1);
       ctx.strokeStyle = "black";
       ctx.strokeText("GRAB A BALL AND THROW THAT BITCH", window.innerWidth / 2, window.innerHeight / 2 + 25);
       ctx.fillStyle = "white";
@@ -536,10 +535,10 @@
     function drawBounceCounter() {
       ctx.save();
       const isMobile = window.innerWidth < 600;
-      ctx.font = isMobile ? "bold 18px Arial" : "bold 24px Arial";
+      ctx.font = isMobile ? "bold 18px Arial" : `bold ${Math.min(window.innerWidth / 50, 24)}px Arial`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.lineWidth = isMobile ? 2 : 3.15;
+      ctx.lineWidth = isMobile ? 2 : Math.min(window.innerWidth / 500, 3.15);
       ctx.strokeStyle = "black";
       ctx.strokeText(`Bounces: ${bounceCount}`, window.innerWidth / 2, 10);
       ctx.fillStyle = "white";
@@ -548,8 +547,7 @@
     }
     
     function animate() {
-      const dpr = window.devicePixelRatio || 1;
-      ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       drawBackgroundText();
       for (let i = 0; i < balls.length; i++) {
         const ball = balls[i];
@@ -568,16 +566,14 @@
           ball.dy += ball.gravity;
           if (Math.abs(ball.dx) < 0.05) ball.dx = 0;
           if (Math.abs(ball.dy) < 0.05) ball.dy = 0;
-          const canvasWidth = canvas.width / dpr;
-          const canvasHeight = canvas.height / dpr;
-          if (ball.x + ball.radius > canvasWidth) {
-            ball.x = canvasWidth - ball.radius;
+          if (ball.x + ball.radius > window.innerWidth) {
+            ball.x = window.innerWidth - ball.radius;
             ball.dx = -ball.dx * ball.damping;
           } else if (ball.x - ball.radius < 0) {
             ball.x = ball.radius;
             ball.dx = -ball.dx * ball.damping;
           }
-          if (ball.y + ball.radius > canvasHeight) {
+          if (ball.y + ball.radius > window.innerHeight) {
             if (wasMovingDown && ball.dy > 1) {
               bounceCount++;
               const currentMilestone = Math.floor(bounceCount / 1000);
@@ -586,7 +582,7 @@
                 showBounceFlash();
               }
             }
-            ball.y = canvasHeight - ball.radius;
+            ball.y = window.innerHeight - ball.radius;
             ball.dx *= 0.95;
             ball.dy = -ball.dy * ball.damping;
           }
@@ -597,7 +593,7 @@
         }
       }
       for (let i = 0; i < balls.length; i++) {
-        for (let j = i + 1; j < balls.length; j++) {
+        for (j = i + 1; j < balls.length; j++) {
           checkCollision(balls[i], balls[j]);
         }
       }
